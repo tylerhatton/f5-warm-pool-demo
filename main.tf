@@ -22,7 +22,6 @@ module "vpc" {
 
   tags = {
     Terraform = "true"
-    Lab_ID    = local.name_prefix
     Owner     = local.owner
   }
 }
@@ -40,12 +39,25 @@ module "nlb" {
 
   tags = {
     Terraform = "true"
-    Lab_ID    = local.name_prefix
+    Owner     = local.owner
   }
 }
 
-module "bigip-autoscale" {
-  source = "./modules/bigip-autoscale"
+module "bigip-3arm-autoscale" {
+  source = "./modules/bigip-3arm-autoscale"
 
+  key_pair    = var.key_pair
+  name_prefix = "${local.name_prefix}"
 
+  vpc_id               = module.vpc.vpc_id
+  management_subnet_id = module.vpc.public_subnets[1]
+  external_subnet_id   = module.vpc.public_subnets[0]
+  internal_subnet_id   = module.vpc.private_subnets[0]
+
+  provisioned_modules = ["\"ltm\": \"nominal\""]
+
+  default_tags = {
+    Terraform     = "true"
+    Owner         = local.owner
+  }
 }
