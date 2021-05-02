@@ -64,7 +64,17 @@ resource "aws_launch_template" "bigip_3arm" {
   tag_specifications {
     resource_type = "instance"
 
-    tags = merge(tomap({"Name" = "F5_LTM"}), var.default_tags)
+    tags = merge(tomap({ "Name" = "F5_LTM" }), var.default_tags)
     # tags = var.default_tags
   }
+}
+
+resource "aws_autoscaling_group" "bigip_3arm" {
+  name                      = "bigip-3arm-ag"
+  desired_capacity          = 2
+  max_size                  = 5
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "EC2"
+  launch_configuration      = aws_launch_template.bigip_3arm.name
 }
