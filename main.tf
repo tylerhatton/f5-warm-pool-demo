@@ -61,3 +61,13 @@ module "bigip-3arm-autoscale" {
     Owner         = local.owner
   }
 }
+
+module "jumpbox" {
+  source           = "git@github.com:tylerhatton/amazon-linux-jumpbox-tf-module.git"
+  name_prefix      = "${local.name_prefix}-"
+
+  key_pair         = var.key_pair
+  vpc_id           = var.key_pair
+  subnet_id        = module.vpc.public_subnets[1]
+  private_ip       = "10.128.30.100"
+}

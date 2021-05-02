@@ -44,7 +44,6 @@ resource "aws_launch_template" "bigip_3arm" {
 
   network_interfaces {
     subnet_id                   = var.management_subnet_id
-    associate_public_ip_address = true
     description                 = "mgmt"
     device_index                = 0
   }
@@ -71,10 +70,21 @@ resource "aws_launch_template" "bigip_3arm" {
 
 resource "aws_autoscaling_group" "bigip_3arm" {
   name                      = "bigip-3arm-ag"
+  availability_zones        = ["us-west-1b"]
   desired_capacity          = 2
   max_size                  = 5
   min_size                  = 1
   health_check_grace_period = 300
   health_check_type         = "EC2"
-  launch_configuration      = aws_launch_template.bigip_3arm.name
+
+  launch_template {
+    id      = aws_launch_template.bigip_3arm.id
+    version = "$Latest"
+  }
+
+  warm_pool {
+    pool_state                  = "Stopped"
+    min_size                    = 1
+    max_group_prepared_capacity = 3
+  }
 }
