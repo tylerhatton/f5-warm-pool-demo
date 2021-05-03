@@ -46,35 +46,6 @@ cat << 'EOF' > /tmp/do_payload.json
         "myProvisioning": {
             "class": "Provision",
             ${provisioned_modules}
-        },
-        "external": {
-            "class": "VLAN",
-            "tag": 4092,
-            "mtu": 1500,
-            "interfaces": [
-                {
-                    "name": "1.2",
-                    "tagged": false
-                }
-            ]
-        },
-        "internal": {
-            "class": "VLAN",
-            "tag": 4093,
-            "mtu": 1500,
-            "interfaces": [
-                {
-                    "name": "1.1",
-                    "tagged": false
-                }
-            ]
-        },
-        "internal-self": {
-            "class": "SelfIp",
-            "address": "${internal_self_ip}/24",
-            "vlan": "internal",
-            "allowService": "none",
-            "trafficGroup": "traffic-group-local-only"
         }
     }
 }
@@ -101,4 +72,4 @@ curl -L -o $ts_pkg_path $ts_pkg_url
 curl -k -u admin:${bigip_password} -X POST -d $ts_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
 
 # Cleanup
-rm -f /tmp/do_payload.json
+# rm -f /tmp/do_payload.json

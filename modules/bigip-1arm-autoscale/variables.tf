@@ -28,11 +28,6 @@ variable "vpc_id" {
   description = "ID of the VPC where the F5 BIG-IP will reside."
 }
 
-variable "management_subnet_id" {
-  type        = string
-  description = "ID of F5 BIG-IP's management subnet."
-}
-
 variable "external_subnet_id" {
   type        = string
   description = "ID of F5 BIG-IP's external subnet."
