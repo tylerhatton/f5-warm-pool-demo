@@ -2,7 +2,7 @@ locals {
   name_prefix = var.name_prefix
   default_tags = {
     Terraform = "true"
-    Owner = var.owner
+    Owner     = var.owner
   }
 }
 

@@ -7,7 +7,6 @@ resource "random_password" "admin_password" {
   special = false
 }
 
-# User Data Template
 data "template_file" "user_data" {
   template = file("${path.module}/templates/user_data.tpl")
 
@@ -97,7 +96,7 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   min_size                  = 1
   health_check_grace_period = 300
   health_check_type         = "EC2"
-  target_group_arns      = module.nlb.target_group_arns
+  target_group_arns         = module.nlb.target_group_arns
 
   launch_template {
     id      = aws_launch_template.bigip_1arm.id
@@ -108,6 +107,60 @@ resource "aws_autoscaling_group" "bigip_1arm" {
     pool_state                  = "Stopped"
     min_size                    = 1
     max_group_prepared_capacity = 3
+  }
+}
+
+resource "aws_autoscaling_lifecycle_hook" "bigip_1arm_launching" {
+  name                    = "${var.name_prefix}-bigip-1arm-launch"
+  autoscaling_group_name  = aws_autoscaling_group.bigip_1arm.name
+  default_result          = "CONTINUE"
+  heartbeat_timeout       = 60
+  lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
+  notification_target_arn = aws_sns_topic.bigip_1arm_launching.arn
+  role_arn                = aws_iam_role.bigip_1arm.arn
+}
+
+resource "aws_sns_topic" "bigip_1arm_launching" {
+  name = "${var.name_prefix}-bigip-1arm-launch"
+}
+
+resource "aws_sns_topic" "bigip_1arm_terminating" {
+  name = "${var.name_prefix}-bigip-1arm-term"
+}
+
+resource "aws_iam_role" "bigip_1arm" {
+  name = "${var.name_prefix}-bigip-1arm"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "autoscaling.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  inline_policy {
+    name = "${var.name_prefix}-bigip-1arm"
+
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = ["sns:Publish"]
+          Effect = "Allow"
+          Resource = [
+            aws_sns_topic.bigip_1arm_launching.arn,
+            aws_sns_topic.bigip_1arm_terminating.arn
+          ]
+        },
+      ]
+    })
   }
 }
 
