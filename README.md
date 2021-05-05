@@ -32,6 +32,7 @@ A basic demonstration of using warm pool and lifecycle events to speed up the sc
 | jumpbox\_ip | n/a |
 | jumpbox\_username | n/a |
 | jumpbox\_password | n/a |
+| bigip\_admin\_username | n/a |
 | bigip\_admin\_password | n/a |
 
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

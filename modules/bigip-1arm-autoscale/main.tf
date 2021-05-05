@@ -7,11 +7,26 @@ resource "random_password" "admin_password" {
   special = false
 }
 
+resource "aws_ssm_parameter" "bigip_username" {
+  name  = "/big-ip/credentials/bigip-username"
+  type  = "SecureString"
+  value = var.admin_username
+  tags  = var.default_tags
+}
+
+resource "aws_ssm_parameter" "bigip_password" {
+  name  = "/big-ip/credentials/bigip-password"
+  type  = "SecureString"
+  value = local.admin_password
+  tags  = var.default_tags
+}
+
 data "template_file" "user_data" {
   template = file("${path.module}/templates/user_data.tpl")
 
   vars = {
     hostname            = var.hostname
+    bigip_username      = var.admin_username
     bigip_password      = local.admin_password
     provisioned_modules = join(",", var.provisioned_modules)
   }
@@ -91,7 +106,7 @@ resource "aws_launch_template" "bigip_1arm" {
 resource "aws_autoscaling_group" "bigip_1arm" {
   name                      = "${var.name_prefix}-bigip-1arm-asg"
   vpc_zone_identifier       = [var.external_subnet_id]
-  desired_capacity          = 2
+  desired_capacity          = 3
   max_size                  = 5
   min_size                  = 1
   health_check_grace_period = 300
@@ -103,6 +118,15 @@ resource "aws_autoscaling_group" "bigip_1arm" {
     version = "$Latest"
   }
 
+  initial_lifecycle_hook {
+    name                    = "${var.name_prefix}-bigip-1arm-launch"
+    default_result          = "CONTINUE"
+    heartbeat_timeout       = 60
+    lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
+    notification_target_arn = aws_sns_topic.bigip_1arm.arn
+    role_arn                = aws_iam_role.bigip_1arm.arn
+  }
+
   warm_pool {
     pool_state                  = "Stopped"
     min_size                    = 1
@@ -110,22 +134,22 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   }
 }
 
-resource "aws_autoscaling_lifecycle_hook" "bigip_1arm_launching" {
-  name                    = "${var.name_prefix}-bigip-1arm-launch"
-  autoscaling_group_name  = aws_autoscaling_group.bigip_1arm.name
-  default_result          = "CONTINUE"
-  heartbeat_timeout       = 60
-  lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
-  notification_target_arn = aws_sns_topic.bigip_1arm_launching.arn
-  role_arn                = aws_iam_role.bigip_1arm.arn
+resource "aws_sns_topic" "bigip_1arm" {
+  name = "${var.name_prefix}-bigip-1arm"
 }
 
-resource "aws_sns_topic" "bigip_1arm_launching" {
-  name = "${var.name_prefix}-bigip-1arm-launch"
+resource "aws_sns_topic_subscription" "bigip_1arm" {
+  topic_arn = aws_sns_topic.bigip_1arm.arn
+  protocol  = "lambda"
+  endpoint  = module.lifecycle_hook_lambda_function.lambda_function_arn
 }
 
-resource "aws_sns_topic" "bigip_1arm_terminating" {
-  name = "${var.name_prefix}-bigip-1arm-term"
+resource "aws_lambda_permission" "bigip_1arm" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lifecycle_hook_lambda_function.lambda_function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.bigip_1arm.arn
 }
 
 resource "aws_iam_role" "bigip_1arm" {
@@ -155,10 +179,9 @@ resource "aws_iam_role" "bigip_1arm" {
           Action = ["sns:Publish"]
           Effect = "Allow"
           Resource = [
-            aws_sns_topic.bigip_1arm_launching.arn,
-            aws_sns_topic.bigip_1arm_terminating.arn
+            aws_sns_topic.bigip_1arm.arn
           ]
-        },
+        }
       ]
     })
   }
@@ -200,4 +223,42 @@ module "nlb" {
   ]
 
   tags = var.default_tags
+}
+
+module "lifecycle_hook_lambda_function" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "bigip-1arm-lifecycle-function"
+  description   = "Lifecycle hook lambda function for BIG-IP 1arm configuration."
+  handler       = "app.lambda_handler"
+  runtime       = "python3.8"
+  source_path   = "${path.module}/lifecycle-hook"
+  tags          = var.default_tags
+
+  attach_policy_json = true
+  policy_json        = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInstances"
+            ],
+            "Resource": ["*"]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+              "ssm:GetParameter",
+              "ssm:GetParameters"
+            ],
+            "Resource": [
+              "${aws_ssm_parameter.bigip_username.arn}",
+              "${aws_ssm_parameter.bigip_password.arn}"
+            ]
+        }
+    ]
+}
+EOF
 }

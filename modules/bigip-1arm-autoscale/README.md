@@ -19,6 +19,7 @@ No requirements.
 |------|-------------|------|---------|
 | key\_pair | Name of key pair to SSH into the F5 BIG-IP. | `string` | `null` |
 | instance\_type | Size of F5 BIG-IP's EC2 instance. | `string` | `"t2.large"` |
+| admin\_username | Admin username for F5 management console and SSH server. | `string` | `"admin"` |
 | admin\_password | Admin password for F5 management console and SSH server. | `string` | `""` |
 | hostname | Hostname of F5 BIG-IP. | `string` | `"demo-f5.example.com"` |
 | vpc\_id | ID of the VPC where the F5 BIG-IP will reside. | `string` | n/a |
@@ -32,6 +33,7 @@ No requirements.
 
 | Name | Description |
 |------|-------------|
+| admin\_username | n/a |
 | admin\_password | n/a |
 
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

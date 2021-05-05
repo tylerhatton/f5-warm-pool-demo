@@ -3,7 +3,7 @@
 sleep 3m
 
 # Configure randomized password
-echo -e '${bigip_password}\n${bigip_password}' | tmsh modify auth user admin prompt-for-password
+echo -e '${bigip_password}\n${bigip_password}' | tmsh modify auth user ${bigip_username} prompt-for-password
 tmsh save sys config
 
 # Network connectivity test
@@ -29,7 +29,7 @@ do_pkg_url="https://github.com/F5Networks/f5-declarative-onboarding/releases/dow
 do_pkg_path="/var/config/rest/downloads/declarative_onboarding.rpm"
 do_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$do_pkg_path\"}"
 curl -L -o $do_pkg_path $do_pkg_url
-curl -k -u admin:${bigip_password} -X POST -d $do_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
+curl -k -u ${bigip_username}:${bigip_password} -X POST -d $do_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
 
 sleep 20
 
@@ -51,7 +51,7 @@ cat << 'EOF' > /tmp/do_payload.json
 }
 EOF
 
-curl -k -u admin:${bigip_password} -X POST -d @/tmp/do_payload.json "https://localhost/mgmt/shared/declarative-onboarding"
+curl -k -u ${bigip_username}:${bigip_password} -X POST -d @/tmp/do_payload.json "https://localhost/mgmt/shared/declarative-onboarding"
 
 sleep 60
 
@@ -60,7 +60,7 @@ as_pkg_url="https://github.com/F5Networks/f5-appsvcs-extension/releases/download
 as_pkg_path="/var/config/rest/downloads/f5-appsvcs-3.19.1-1.noarch.rpm"
 as_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$as_pkg_path\"}"
 curl -L -o $as_pkg_path $as_pkg_url
-curl -k -u admin:${bigip_password} -X POST -d $as_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
+curl -k -u ${bigip_username}:${bigip_password} -X POST -d $as_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
 
 sleep 5
 
@@ -69,7 +69,7 @@ ts_pkg_url="https://github.com/F5Networks/f5-telemetry-streaming/releases/downlo
 ts_pkg_path="/var/config/rest/downloads/f5-telemetry-1.16.0-4.noarch.rpm"
 ts_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$ts_pkg_path\"}"
 curl -L -o $ts_pkg_path $ts_pkg_url
-curl -k -u admin:${bigip_password} -X POST -d $ts_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
+curl -k -u ${bigip_username}:${bigip_password} -X POST -d $ts_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
 
 # Cleanup
 # rm -f /tmp/do_payload.json

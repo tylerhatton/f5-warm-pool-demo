@@ -10,6 +10,13 @@ variable "instance_type" {
   description = "Size of F5 BIG-IP's EC2 instance."
 }
 
+variable "admin_username" {
+  type        = string
+  default     = "admin"
+  description = "Admin username for F5 management console and SSH server."
+  sensitive   = true
+}
+
 variable "admin_password" {
   type        = string
   default     = ""
