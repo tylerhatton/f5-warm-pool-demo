@@ -90,10 +90,11 @@ resource "aws_launch_template" "bigip_1arm" {
   tags          = var.default_tags
 
   network_interfaces {
-    subnet_id       = var.external_subnet_id
-    security_groups = [aws_security_group.bigip_1arm.id]
-    description     = "external"
-    device_index    = 0
+    subnet_id             = var.external_subnet_id
+    security_groups       = [aws_security_group.bigip_1arm.id]
+    delete_on_termination = true
+    description           = "external"
+    device_index          = 0
   }
 
   tag_specifications {
@@ -112,6 +113,10 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   health_check_grace_period = 300
   health_check_type         = "EC2"
   target_group_arns         = module.nlb.target_group_arns
+
+  instance_refresh {
+    strategy = "Rolling"
+  }
 
   launch_template {
     id      = aws_launch_template.bigip_1arm.id
@@ -257,7 +262,16 @@ module "lifecycle_hook_lambda_function" {
               "${aws_ssm_parameter.bigip_username.arn}",
               "${aws_ssm_parameter.bigip_password.arn}"
             ]
-        }
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+              "autoscaling:CompleteLifecycleAction"
+            ],
+            "Resource": [
+              "${aws_autoscaling_group.bigip_1arm.arn}"
+            ]
+        } 
     ]
 }
 EOF
