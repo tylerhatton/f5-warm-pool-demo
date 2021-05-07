@@ -12,7 +12,7 @@ logger.setLevel(logging.INFO)
 
 autoscaling = boto3.client('autoscaling')
 ec2 = boto3.client('ec2')
-ec2 = boto3.client('ssm')
+ssm = boto3.client('ssm')
 
 
 def send_lifecycle_action(lifecycle_event, result):
@@ -37,7 +37,7 @@ def send_lifecycle_action(lifecycle_event, result):
 def instance_launching(lifecycle_event):
     logger.info('EC2_INSTANCE_LAUNCHING event')
     ec2_instance_id = lifecycle_event['EC2InstanceId']
-    logger.info(ec2.describe_instances(InstanceIds=[{ec2_instance_id}]))
+    logger.info(ec2.describe_instances(InstanceIds=[ec2_instance_id]))
 
 
 def instance_terminating(lifecycle_event):
@@ -46,7 +46,7 @@ def instance_terminating(lifecycle_event):
 
 def lambda_handler(event, context):
     logger.info('Trigger Record: {}'.format(event['Records']))
-    lifecycle_event = event['Records'][0]['Sns']['Message']
+    lifecycle_event = json.loads(event['Records'][0]['Sns']['Message'])
 
     # Verify Lifecycle Transition is present
     if 'LifecycleTransition' not in lifecycle_event:
@@ -55,9 +55,10 @@ def lambda_handler(event, context):
         return
 
     # Identifying Lifecycle hook type
-    if lifecycle_event['LifecycleTransition'] == "autoscaling:EC2_INSTANCE_LAUNCHING":
+    logger.info('Lifecycle Event: {}'.format(lifecycle_event))
+    if lifecycle_event['LifecycleTransition'] == 'autoscaling:EC2_INSTANCE_LAUNCHING':
         instance_launching(lifecycle_event)
-    elif lifecycle_event['LifecycleTransition'] == "autoscaling:EC2_INSTANCE_TERMINATING":
+    elif lifecycle_event['LifecycleTransition'] == 'autoscaling:EC2_INSTANCE_TERMINATING':
         instance_terminating(lifecycle_event)
     else:
         logger.info('Unknown LifecycleTransition state. Exiting...')

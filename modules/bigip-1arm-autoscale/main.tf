@@ -107,8 +107,8 @@ resource "aws_launch_template" "bigip_1arm" {
 resource "aws_autoscaling_group" "bigip_1arm" {
   name                      = "${var.name_prefix}-bigip-1arm-asg"
   vpc_zone_identifier       = [var.external_subnet_id]
-  desired_capacity          = 3
-  max_size                  = 5
+  desired_capacity          = 5
+  max_size                  = 6
   min_size                  = 1
   health_check_grace_period = 300
   health_check_type         = "EC2"
@@ -227,7 +227,7 @@ module "nlb" {
     },
   ]
 
-  tags = var.default_tags
+  lb_tags = var.default_tags
 }
 
 module "lifecycle_hook_lambda_function" {
