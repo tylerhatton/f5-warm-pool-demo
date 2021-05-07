@@ -14,8 +14,13 @@ autoscaling = boto3.client('autoscaling')
 ec2 = boto3.client('ec2')
 ssm = boto3.client('ssm')
 
+# Getting username and password locations in parameter store
+USER_PARAM = os.environ['USER_PARAM_LOCATION']
+PASS_PARAM = os.environ['PASS_PARAM_LOCATION']
+
 
 def send_lifecycle_action(lifecycle_event, result):
+    # Update lifecycle event with continue or abort
     try:
         response = autoscaling.complete_lifecycle_action(
             LifecycleHookName=lifecycle_event['detail']['LifecycleHookName'],
@@ -34,10 +39,58 @@ def send_lifecycle_action(lifecycle_event, result):
     return
 
 
+def is_as3_alive(f5_ip, username, password, max_retries):
+    # Check if AS3 is responsive and available
+    logger.info('Checking if AS3 is online...')
+    retries = 0
+
+    # Try connecting to AS3 until max retries
+    while retries < max_retries:
+        retries = retries + 1
+        try:
+            time.sleep(10)
+            logger.info(
+                'Checking if AS3 is available attempt #: {}'.format(retries))
+            response = requests.get(
+                'https://' + f5_ip + '/mgmt/shared/appsvcs/declare',
+                auth=(username, password),
+                verify=False,
+                timeout=5
+            )
+            # Return True if status code for AS3 is 200
+            if response.status_code == 200:
+                return True
+        except requests.exceptions.Timeout:
+            logger.info('Connection Timeout')
+            continue
+        except requests.exceptions.ConnectionError as errc:
+            logger.info(errc)
+            continue
+        except requests.exceptions.HTTPError as errh:
+            logger.info(errh)
+            continue
+        except requests.exceptions.RequestException as err:
+            logger.info(err)
+            continue
+    # Could not reach AS3
+    return False
+
+
 def instance_launching(lifecycle_event):
+    # Instance launching event cycle
     logger.info('EC2_INSTANCE_LAUNCHING event')
-    ec2_instance_id = lifecycle_event['EC2InstanceId']
-    logger.info(ec2.describe_instances(InstanceIds=[ec2_instance_id]))
+    try:
+        # Grab EC2 Instance info
+        ec2_instance_id = lifecycle_event['EC2InstanceId']
+        ec2_instance_info = ec2.describe_instances(
+            InstanceIds=[ec2_instance_id])
+
+        logger.info('EC2 Instance info: {}'.format(ec2_instance_info))
+
+    except ClientError as e:
+        message = 'Error completing lifecycle action: {}'.format(e)
+        logger.error(message)
+        raise Exception(message)
 
 
 def instance_terminating(lifecycle_event):

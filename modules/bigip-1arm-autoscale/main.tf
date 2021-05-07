@@ -240,6 +240,11 @@ module "lifecycle_hook_lambda_function" {
   source_path   = "${path.module}/lifecycle-hook"
   tags          = var.default_tags
 
+  environment_variables = {
+    USER_PARAM_LOCATION = aws_ssm_parameter.bigip_username.name
+    PASS_PARAM_LOCATION = aws_ssm_parameter.bigip_password.name
+  }
+
   attach_policy_json = true
   policy_json        = <<EOF
 {
