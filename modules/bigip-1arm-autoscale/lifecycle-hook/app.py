@@ -15,8 +15,8 @@ ec2 = boto3.client('ec2')
 ssm = boto3.client('ssm')
 
 # Getting username and password locations in parameter store
-USER_PARAM = os.environ['USER_PARAM_LOCATION']
-PASS_PARAM = os.environ['PASS_PARAM_LOCATION']
+USER_PARAM = os.environ['USER_SECRET_LOCATION']
+PASS_PARAM = os.environ['PASS_SECRET_LOCATION']
 
 
 def send_lifecycle_action(lifecycle_event, result):

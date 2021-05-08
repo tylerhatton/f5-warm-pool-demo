@@ -7,28 +7,30 @@ resource "random_password" "admin_password" {
   special = false
 }
 
-resource "aws_ssm_parameter" "bigip_username" {
-  name  = "/big-ip/credentials/bigip-username"
-  type  = "SecureString"
-  value = var.admin_username
-  tags  = var.default_tags
+resource "aws_secretsmanager_secret" "bigip_username" {
+  name = "bigip_username"
 }
 
-resource "aws_ssm_parameter" "bigip_password" {
-  name  = "/big-ip/credentials/bigip-password"
-  type  = "SecureString"
-  value = local.admin_password
-  tags  = var.default_tags
+resource "aws_secretsmanager_secret_version" "bigip_username" {
+  secret_id     = aws_secretsmanager_secret.bigip_username.id
+  secret_string = var.admin_username
+}
+
+resource "aws_secretsmanager_secret" "bigip_password" {
+  name = "bigip_password"
+}
+
+resource "aws_secretsmanager_secret_version" "bigip_password" {
+  secret_id     = aws_secretsmanager_secret.bigip_password.id
+  secret_string = local.admin_password
 }
 
 data "template_file" "user_data" {
   template = file("${path.module}/templates/user_data.tpl")
 
   vars = {
-    hostname            = var.hostname
-    bigip_username      = var.admin_username
-    bigip_password      = local.admin_password
-    provisioned_modules = join(",", var.provisioned_modules)
+    admin_password_secret = aws_secretsmanager_secret.bigip_password.id
+    provisioned_modules   = join(",", var.provisioned_modules)
   }
 }
 
@@ -97,6 +99,10 @@ resource "aws_launch_template" "bigip_1arm" {
     device_index          = 0
   }
 
+  iam_instance_profile {
+    name = aws_iam_instance_profile.bigip_1arm.name
+  }
+
   tag_specifications {
     resource_type = "instance"
 
@@ -104,11 +110,51 @@ resource "aws_launch_template" "bigip_1arm" {
   }
 }
 
+resource "aws_iam_instance_profile" "bigip_1arm" {
+  name = "bigip_1arm"
+  role = aws_iam_role.bigip_1arm_lt.name
+}
+
+resource "aws_iam_role" "bigip_1arm_lt" {
+  name = "${var.name_prefix}-bigip-1arm-lt"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  inline_policy {
+    name = "${var.name_prefix}-bigip-1arm-lt"
+
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = ["secretsmanager:GetSecretValue"]
+          Effect = "Allow"
+          Resource = [
+            aws_secretsmanager_secret.bigip_password.arn
+          ]
+        }
+      ]
+    })
+  }
+}
+
 resource "aws_autoscaling_group" "bigip_1arm" {
   name                      = "${var.name_prefix}-bigip-1arm-asg"
   vpc_zone_identifier       = [var.external_subnet_id]
-  desired_capacity          = 5
-  max_size                  = 6
+  desired_capacity          = 2
+  max_size                  = 5
   min_size                  = 1
   health_check_grace_period = 300
   health_check_type         = "EC2"
@@ -129,7 +175,7 @@ resource "aws_autoscaling_group" "bigip_1arm" {
     heartbeat_timeout       = 60
     lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
     notification_target_arn = aws_sns_topic.bigip_1arm.arn
-    role_arn                = aws_iam_role.bigip_1arm.arn
+    role_arn                = aws_iam_role.bigip_1arm_lh.arn
   }
 
   warm_pool {
@@ -157,8 +203,8 @@ resource "aws_lambda_permission" "bigip_1arm" {
   source_arn    = aws_sns_topic.bigip_1arm.arn
 }
 
-resource "aws_iam_role" "bigip_1arm" {
-  name = "${var.name_prefix}-bigip-1arm"
+resource "aws_iam_role" "bigip_1arm_lh" {
+  name = "${var.name_prefix}-bigip-1arm-lh"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -175,7 +221,7 @@ resource "aws_iam_role" "bigip_1arm" {
   })
 
   inline_policy {
-    name = "${var.name_prefix}-bigip-1arm"
+    name = "${var.name_prefix}-bigip-1arm-lh"
 
     policy = jsonencode({
       Version = "2012-10-17"
@@ -241,8 +287,8 @@ module "lifecycle_hook_lambda_function" {
   tags          = var.default_tags
 
   environment_variables = {
-    USER_PARAM_LOCATION = aws_ssm_parameter.bigip_username.name
-    PASS_PARAM_LOCATION = aws_ssm_parameter.bigip_password.name
+    USER_SECRET_LOCATION = aws_secretsmanager_secret.bigip_username.id
+    PASS_SECRET_LOCATION = aws_secretsmanager_secret.bigip_password.id
   }
 
   attach_policy_json = true
@@ -260,12 +306,10 @@ module "lifecycle_hook_lambda_function" {
         {
             "Effect": "Allow",
             "Action": [
-              "ssm:GetParameter",
-              "ssm:GetParameters"
+              "secretsmanager:GetSecretValue"
             ],
             "Resource": [
-              "${aws_ssm_parameter.bigip_username.arn}",
-              "${aws_ssm_parameter.bigip_password.arn}"
+              "${aws_secretsmanager_secret.bigip_password.arn}"
             ]
         },
         {

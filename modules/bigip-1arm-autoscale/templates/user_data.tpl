@@ -1,75 +1,87 @@
 #!/usr/bin/env bash
 
-sleep 3m
+# Create required directo
+mkdir -p  /var/log/cloud /config/cloud /var/lib/cloud/icontrollx_installs /var/config/rest/downloads
 
-# Configure randomized password
-echo -e '${bigip_password}\n${bigip_password}' | tmsh modify auth user ${bigip_username} prompt-for-password
-tmsh save sys config
-
-# Network connectivity test
-count=0
-while true
-do
-  STATUS=$(curl -s -k -I example.com | grep HTTP)
-  if [[ $STATUS == *"200"* ]]; then
-    echo "Got 200! VE is Ready!"
-    break
-  elif [ $count -le 6 ]; then
-    echo "Status code: $STATUS network is not available yet."
-    count=$[$count+1]
-  else
-    echo "Network Failure"
-    break
-  fi
-  sleep 10
-done
-
-# Install Declarative Onboarding
-do_pkg_url="https://github.com/F5Networks/f5-declarative-onboarding/releases/download/v1.8.0/f5-declarative-onboarding-1.8.0-2.noarch.rpm"
-do_pkg_path="/var/config/rest/downloads/declarative_onboarding.rpm"
-do_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$do_pkg_path\"}"
-curl -L -o $do_pkg_path $do_pkg_url
-curl -k -u ${bigip_username}:${bigip_password} -X POST -d $do_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
-
-sleep 20
-
-# Send Declarative Onboarding Payload
-
-cat << 'EOF' > /tmp/do_payload.json
-{
-    "schemaVersion": "1.5.0",
-    "class": "Device",
-    "async": true,
-    "Common": {
-        "class": "Tenant",
-        "hostname": "${hostname}",
-        "myProvisioning": {
-            "class": "Provision",
-            ${provisioned_modules}
-        }
-    }
-}
+cat << 'EOF' > /config/cloud/runtime-init-conf.yaml
+---
+runtime_parameters:
+  - name: HOST_NAME
+    type: metadata
+    metadataProvider:
+      environment: aws
+      type: compute
+      field: hostname
+  - name: REGION
+    type: url
+    value: http://169.254.169.254/latest/dynamic/instance-identity/document
+    query: region
+  - name: ADMIN_PASS
+    type: secret
+    secretProvider:
+      environment: aws
+      type: SecretsManager
+      version: AWSCURRENT
+      secretId: ${admin_password_secret}
+extension_packages: 
+  install_operations:
+    - extensionType: do
+      extensionVersion: 1.19.0
+      extensionUrl: https://github.com/F5Networks/f5-declarative-onboarding/releases/download/v1.19.0/f5-declarative-onboarding-1.19.0-2.noarch.rpm
+    - extensionType: as3
+      extensionVersion: 3.26.0
+      extensionUrl: https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.26.0/f5-appsvcs-3.26.0-5.noarch.rpm
+    - extensionType: ts
+      extensionVersion: 1.18.0
+      extensionUrl: https://github.com/F5Networks/f5-telemetry-streaming/releases/download/v1.18.0/f5-telemetry-1.18.0-2.noarch.rpm
+extension_services: 
+  service_operations:
+    - extensionType: do
+      type: inline
+      value:
+        schemaVersion: 1.0.0
+        class: Device
+        async: true
+        label: Standalone 3NIC BIG-IP declaration for Declarative Onboarding with PAYG license
+        Common:
+          class: Tenant
+          dbVars:
+            class: DbVariables
+            restjavad.useextramb: true
+            provision.extramb: 500
+            config.allow.rfc3927: enable
+            ui.advisory.enabled: true
+            ui.advisory.color: blue
+            ui.advisory.text: "BIG-IP Autoscale"
+          myNtp:
+            class: NTP
+            servers:
+              - 0.pool.ntp.org
+            timezone: UTC
+          myDns:
+            class: DNS
+            nameServers:
+              - 10.0.0.2
+              - 8.8.8.8
+          mySystem:
+            autoPhonehome: true
+            class: System
+            hostname: '{{{HOST_NAME}}}'
+          admin:
+            class: User
+            userType: regular
+            password: '{{{ ADMIN_PASS }}}'
+            shell: bash
+post_onboard_enabled:
+  - name: create_misc_routes
+    type: inline
+    commands:
+    - tmsh save sys config
 EOF
 
-curl -k -u ${bigip_username}:${bigip_password} -X POST -d @/tmp/do_payload.json "https://localhost/mgmt/shared/declarative-onboarding"
-
-sleep 60
-
-# Install AS3
-as_pkg_url="https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.19.1/f5-appsvcs-3.19.1-1.noarch.rpm"
-as_pkg_path="/var/config/rest/downloads/f5-appsvcs-3.19.1-1.noarch.rpm"
-as_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$as_pkg_path\"}"
-curl -L -o $as_pkg_path $as_pkg_url
-curl -k -u ${bigip_username}:${bigip_password} -X POST -d $as_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
-
-sleep 5
-
-# Install Telemetry Streaming
-ts_pkg_url="https://github.com/F5Networks/f5-telemetry-streaming/releases/download/v1.16.0/f5-telemetry-1.16.0-4.noarch.rpm"
-ts_pkg_path="/var/config/rest/downloads/f5-telemetry-1.16.0-4.noarch.rpm"
-ts_json_pl="{\"operation\":\"INSTALL\",\"packageFilePath\":\"$ts_pkg_path\"}"
-curl -L -o $ts_pkg_path $ts_pkg_url
-curl -k -u ${bigip_username}:${bigip_password} -X POST -d $ts_json_pl "https://localhost/mgmt/shared/iapp/package-management-tasks"
-
-# Cleanup
-# rm -f /tmp/do_payload.json
+for i in {1..30}; do
+   curl -fv --retry 1 --connect-timeout 5 -L https://github.com/F5Networks/f5-bigip-runtime-init/releases/download/1.2.0/f5-bigip-runtime-init-1.2.0-1.gz.run -o "/var/config/rest/downloads/f5-bigip-runtime-init.gz.run" && break || sleep 10
+done
+# Install
+bash /var/config/rest/downloads/f5-bigip-runtime-init.gz.run -- '--cloud aws'
+/usr/local/bin/f5-bigip-runtime-init --config-file /config/cloud/runtime-init-conf.yaml
