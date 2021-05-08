@@ -52,7 +52,7 @@ def is_as3_alive(f5_ip, username, password, max_retries):
             logger.info(
                 'Checking if AS3 is available attempt #: {}'.format(retries))
             response = requests.get(
-                'https://' + f5_ip + '/mgmt/shared/appsvcs/declare',
+                'https://' + f5_ip + ':8443/mgmt/shared/appsvcs/info',
                 auth=(username, password),
                 verify=False,
                 timeout=5

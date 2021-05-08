@@ -7,8 +7,13 @@ resource "random_password" "admin_password" {
   special = false
 }
 
+resource "random_string" "secret_prefix" {
+  length  = 5
+  special = false
+}
+
 resource "aws_secretsmanager_secret" "bigip_username" {
-  name = "bigip_username"
+  name = "${random_string.secret_prefix.result}-bigip_username"
 }
 
 resource "aws_secretsmanager_secret_version" "bigip_username" {
@@ -17,7 +22,7 @@ resource "aws_secretsmanager_secret_version" "bigip_username" {
 }
 
 resource "aws_secretsmanager_secret" "bigip_password" {
-  name = "bigip_password"
+  name = "${random_string.secret_prefix.result}-bigip_password"
 }
 
 resource "aws_secretsmanager_secret_version" "bigip_password" {
@@ -116,7 +121,8 @@ resource "aws_iam_instance_profile" "bigip_1arm" {
 }
 
 resource "aws_iam_role" "bigip_1arm_lt" {
-  name = "${var.name_prefix}-bigip-1arm-lt"
+  name        = "${var.name_prefix}-bigip-1arm-lt"
+  description = "AWS role assigned to BIG-IP devices"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -204,7 +210,8 @@ resource "aws_lambda_permission" "bigip_1arm" {
 }
 
 resource "aws_iam_role" "bigip_1arm_lh" {
-  name = "${var.name_prefix}-bigip-1arm-lh"
+  name        = "${var.name_prefix}-bigip-1arm-lh"
+  description = "IAM Role for autoscaling to call SNS for BIG-IP autoscale lifecycle hook"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -284,44 +291,71 @@ module "lifecycle_hook_lambda_function" {
   handler       = "app.lambda_handler"
   runtime       = "python3.8"
   source_path   = "${path.module}/lifecycle-hook"
+  create_role   = false
+  lambda_role   = aws_iam_role.bigip_1arm_lf.arn
   tags          = var.default_tags
 
   environment_variables = {
     USER_SECRET_LOCATION = aws_secretsmanager_secret.bigip_username.id
     PASS_SECRET_LOCATION = aws_secretsmanager_secret.bigip_password.id
   }
+}
 
-  attach_policy_json = true
-  policy_json        = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeInstances"
-            ],
-            "Resource": ["*"]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-              "secretsmanager:GetSecretValue"
-            ],
-            "Resource": [
-              "${aws_secretsmanager_secret.bigip_password.arn}"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-              "autoscaling:CompleteLifecycleAction"
-            ],
-            "Resource": [
-              "${aws_autoscaling_group.bigip_1arm.arn}"
-            ]
-        } 
+resource "aws_iam_role" "bigip_1arm_lf" {
+  name        = "${var.name_prefix}-bigip-1arm-lf"
+  description = "IAM Role for Lambda to call required resources for BIG-IP autoscale lifecycle hook lambda function"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      },
     ]
+  })
+
+  inline_policy {
+    name = "${var.name_prefix}-bigip-1arm-lf"
+
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action   = ["ec2:DescribeInstances"]
+          Effect   = "Allow"
+          Resource = ["*"]
+        },
+        {
+          Action = [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Effect   = "Allow"
+          Resource = ["*"]
+        },
+        {
+          Action = ["secretsmanager:GetSecretValue"]
+          Effect = "Allow"
+          Resource = [
+            aws_secretsmanager_secret.bigip_username.arn,
+            aws_secretsmanager_secret.bigip_password.arn
+          ]
+        },
+        {
+          Action = ["autoscaling:CompleteLifecycleAction"]
+          Effect = "Allow"
+          Resource = [
+            aws_autoscaling_group.bigip_1arm.arn
+          ]
+        }
+      ]
+    })
+  }
 }
-EOF
-}
+
