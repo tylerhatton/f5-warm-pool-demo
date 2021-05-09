@@ -4,12 +4,13 @@ import json
 import logging
 import time
 import requests
+import urllib3
 
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-logging.captureWarnings(False)
+urllib3.disable_warnings()
 
 autoscaling = boto3.client('autoscaling')
 ec2 = boto3.client('ec2')
@@ -24,11 +25,11 @@ def send_lifecycle_action(lifecycle_event, result):
     # Update lifecycle event with continue or abort
     try:
         response = autoscaling.complete_lifecycle_action(
-            LifecycleHookName=lifecycle_event['detail']['LifecycleHookName'],
-            AutoScalingGroupName=lifecycle_event['detail']['AutoScalingGroupName'],
-            LifecycleActionToken=lifecycle_event['detail']['LifecycleActionToken'],
+            LifecycleHookName=lifecycle_event['LifecycleHookName'],
+            AutoScalingGroupName=lifecycle_event['AutoScalingGroupName'],
+            LifecycleActionToken=lifecycle_event['LifecycleActionToken'],
             LifecycleActionResult=result,
-            InstanceId=lifecycle_event['detail']['EC2InstanceId']
+            InstanceId=lifecycle_event['EC2InstanceId']
         )
 
         logger.info(response)
@@ -39,8 +40,10 @@ def send_lifecycle_action(lifecycle_event, result):
 
     return
 
+
 def is_as3_alive(f5_ip, username, password, s3_declaration_location):
     print('placeholder')
+
 
 def is_as3_alive(f5_ip, username, password, max_retries):
     # Check if AS3 is responsive and available
@@ -101,6 +104,8 @@ def instance_launching(lifecycle_event):
         if is_as3_alive(instance_public_ip, username, password, 60):
             # Send AS3 declaration to BIG-IP
             logger.info('SUCCESS')
+            # AS3 Declaration was successful. Tell autoscaling group to continue on lifecycle hook.
+            send_lifecycle_action(lifecycle_event, 'CONTINUE')
         else:
             # AS3 is unreachable. Fail
             message = 'AS3 appears to be unreachable...'

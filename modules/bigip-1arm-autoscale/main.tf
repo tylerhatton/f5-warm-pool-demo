@@ -162,7 +162,7 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   desired_capacity          = 2
   max_size                  = 5
   min_size                  = 1
-  health_check_grace_period = 300
+  health_check_grace_period = 600
   health_check_type         = "EC2"
   target_group_arns         = module.nlb.target_group_arns
 
@@ -293,7 +293,7 @@ module "lifecycle_hook_lambda_function" {
   source_path   = "${path.module}/lifecycle-hook"
   create_role   = false
   lambda_role   = aws_iam_role.bigip_1arm_lf.arn
-  timeout       = 20
+  timeout       = 900
   tags          = var.default_tags
 
   environment_variables = {

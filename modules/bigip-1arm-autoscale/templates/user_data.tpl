@@ -42,7 +42,7 @@ extension_services:
         schemaVersion: 1.0.0
         class: Device
         async: true
-        label: Standalone 3NIC BIG-IP declaration for Declarative Onboarding with PAYG license
+        label: 1NIC autoscale with PAYG licensing
         Common:
           class: Tenant
           dbVars:
@@ -76,7 +76,7 @@ post_onboard_enabled:
   - name: create_misc_routes
     type: inline
     commands:
-    - tmsh save sys config
+      - tmsh save sys config
 EOF
 
 for i in {1..30}; do
