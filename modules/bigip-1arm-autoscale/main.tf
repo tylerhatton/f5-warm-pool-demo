@@ -178,7 +178,7 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   initial_lifecycle_hook {
     name                    = "${var.name_prefix}-bigip-1arm-launch"
     default_result          = "CONTINUE"
-    heartbeat_timeout       = 60
+    heartbeat_timeout       = 600
     lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
     notification_target_arn = aws_sns_topic.bigip_1arm.arn
     role_arn                = aws_iam_role.bigip_1arm_lh.arn
@@ -293,6 +293,7 @@ module "lifecycle_hook_lambda_function" {
   source_path   = "${path.module}/lifecycle-hook"
   create_role   = false
   lambda_role   = aws_iam_role.bigip_1arm_lf.arn
+  timeout       = 20
   tags          = var.default_tags
 
   environment_variables = {
@@ -348,14 +349,31 @@ resource "aws_iam_role" "bigip_1arm_lf" {
           ]
         },
         {
-          Action = ["autoscaling:CompleteLifecycleAction"]
-          Effect = "Allow"
-          Resource = [
-            aws_autoscaling_group.bigip_1arm.arn
-          ]
+          Action   = ["autoscaling:CompleteLifecycleAction"]
+          Effect   = "Allow"
+          Resource = ["*"]
         }
       ]
     })
   }
 }
 
+resource "random_string" "bucket_prefix" {
+  length  = 5
+  special = false
+  upper   = false
+}
+
+resource "aws_s3_bucket" "bigip_1arm_as3" {
+  bucket = "${var.name_prefix}-${random_string.bucket_prefix.result}-bigip-1arm-as3"
+  acl    = "private"
+  tags   = var.default_tags
+}
+
+resource "aws_s3_bucket_object" "bigip_1arm_as3" {
+  for_each = fileset("${path.module}/as3", "**/*.json")
+
+  bucket = aws_s3_bucket.bigip_1arm_as3.bucket
+  key    = "as3-declarations/${each.value}"
+  source = "${path.module}/as3/${each.value}"
+}

@@ -9,14 +9,15 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+logging.captureWarnings(False)
 
 autoscaling = boto3.client('autoscaling')
 ec2 = boto3.client('ec2')
-ssm = boto3.client('ssm')
+sm = boto3.client('secretsmanager')
 
-# Getting username and password locations in parameter store
-USER_PARAM = os.environ['USER_SECRET_LOCATION']
-PASS_PARAM = os.environ['PASS_SECRET_LOCATION']
+# Getting username and password locations in secrets manager
+USER_SECRET = os.environ['USER_SECRET_LOCATION']
+PASS_SECRET = os.environ['PASS_SECRET_LOCATION']
 
 
 def send_lifecycle_action(lifecycle_event, result):
@@ -38,6 +39,8 @@ def send_lifecycle_action(lifecycle_event, result):
 
     return
 
+def is_as3_alive(f5_ip, username, password, s3_declaration_location):
+    print('placeholder')
 
 def is_as3_alive(f5_ip, username, password, max_retries):
     # Check if AS3 is responsive and available
@@ -48,7 +51,6 @@ def is_as3_alive(f5_ip, username, password, max_retries):
     while retries < max_retries:
         retries = retries + 1
         try:
-            time.sleep(10)
             logger.info(
                 'Checking if AS3 is available attempt #: {}'.format(retries))
             response = requests.get(
@@ -60,6 +62,8 @@ def is_as3_alive(f5_ip, username, password, max_retries):
             # Return True if status code for AS3 is 200
             if response.status_code == 200:
                 return True
+            else:
+                time.sleep(10)
         except requests.exceptions.Timeout:
             logger.info('Connection Timeout')
             continue
@@ -82,10 +86,26 @@ def instance_launching(lifecycle_event):
     try:
         # Grab EC2 Instance info
         ec2_instance_id = lifecycle_event['EC2InstanceId']
-        ec2_instance_info = ec2.describe_instances(
+        instance_info = ec2.describe_instances(
             InstanceIds=[ec2_instance_id])
+        instance_public_ip = instance_info['Reservations'][0]['Instances'][0]['PublicIpAddress']
+        logger.info('EC2 Instance info: {}'.format(instance_info))
 
-        logger.info('EC2 Instance info: {}'.format(ec2_instance_info))
+        # Grab username and password from secrets manager
+        username = sm.get_secret_value(
+            SecretId=USER_SECRET)['SecretString']
+        password = sm.get_secret_value(
+            SecretId=PASS_SECRET)['SecretString']
+
+        # Is AS3 Available?
+        if is_as3_alive(instance_public_ip, username, password, 60):
+            # Send AS3 declaration to BIG-IP
+            logger.info('SUCCESS')
+        else:
+            # AS3 is unreachable. Fail
+            message = 'AS3 appears to be unreachable...'
+            logger.error(message)
+            raise Exception(message)
 
     except ClientError as e:
         message = 'Error completing lifecycle action: {}'.format(e)
