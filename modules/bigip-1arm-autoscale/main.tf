@@ -299,6 +299,7 @@ module "lifecycle_hook_lambda_function" {
   environment_variables = {
     USER_SECRET_LOCATION = aws_secretsmanager_secret.bigip_username.id
     PASS_SECRET_LOCATION = aws_secretsmanager_secret.bigip_password.id
+    AS3_BUCKET_NAME      = aws_s3_bucket.bigip_1arm_as3.id
   }
 }
 
@@ -347,6 +348,16 @@ resource "aws_iam_role" "bigip_1arm_lf" {
             aws_secretsmanager_secret.bigip_username.arn,
             aws_secretsmanager_secret.bigip_password.arn
           ]
+        },
+        {
+          Action   = ["s3:ListBucket"]
+          Effect   = "Allow"
+          Resource = [aws_s3_bucket.bigip_1arm_as3.arn]
+        },
+        {
+          Action   = ["s3:GetObject"]
+          Effect   = "Allow"
+          Resource = ["${aws_s3_bucket.bigip_1arm_as3.arn}/*"]
         },
         {
           Action   = ["autoscaling:CompleteLifecycleAction"]

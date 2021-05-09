@@ -15,10 +15,12 @@ urllib3.disable_warnings()
 autoscaling = boto3.client('autoscaling')
 ec2 = boto3.client('ec2')
 sm = boto3.client('secretsmanager')
+s3 = boto3.resource('s3')
 
-# Getting username and password locations in secrets manager
+# Getting username, password, and AS3 bucket name environment variables
 USER_SECRET = os.environ['USER_SECRET_LOCATION']
 PASS_SECRET = os.environ['PASS_SECRET_LOCATION']
+AS3_BUCKET_NAME = os.environ['AS3_BUCKET_NAME']
 
 
 def send_lifecycle_action(lifecycle_event, result):
@@ -41,8 +43,33 @@ def send_lifecycle_action(lifecycle_event, result):
     return
 
 
-def is_as3_alive(f5_ip, username, password, s3_declaration_location):
-    print('placeholder')
+def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
+    try:
+        # Executing AS3 declarations from S3 bucket in as3-declarations/
+        logger.info(
+            'Grabbing AS3 declarations from: {}'.format(AS3_BUCKET_NAME))
+        # Looping through declarations in S3 Bucket
+        bucket = s3.Bucket(s3_declaration_location)
+        for obj in bucket.objects.filter(Prefix='as3-declarations/'):
+            as3_dec = json.loads(obj.get()['Body'].read())
+            # Send AS3 declaration
+            try:
+                response = requests.post(
+                    'https://' + f5_ip + ':8443/mgmt/shared/appsvcs/declare',
+                    auth=(username, password),
+                    json=as3_dec,
+                    verify=False,
+                    timeout=5
+                )
+            except requests.exceptions.HTTPError as e:
+                message = 'Error completing lifecycle action: {}'.format(e)
+                logger.error(message)
+                raise Exception(message)
+
+    except ClientError as e:
+        message = 'Error completing lifecycle action: {}'.format(e)
+        logger.error(message)
+        raise Exception(message)
 
 
 def is_as3_alive(f5_ip, username, password, max_retries):
@@ -102,8 +129,10 @@ def instance_launching(lifecycle_event):
 
         # Is AS3 Available?
         if is_as3_alive(instance_public_ip, username, password, 60):
-            # Send AS3 declaration to BIG-IP
-            logger.info('SUCCESS')
+            logger.info('AS3 successfully requested.')
+            # Send AS3 declaration(s) to BIG-IP
+            send_as3_declarations(instance_public_ip,
+                                  username, password, AS3_BUCKET_NAME)
             # AS3 Declaration was successful. Tell autoscaling group to continue on lifecycle hook.
             send_lifecycle_action(lifecycle_event, 'CONTINUE')
         else:
@@ -120,6 +149,7 @@ def instance_launching(lifecycle_event):
 
 def instance_terminating(lifecycle_event):
     logger.info('EC2_INSTANCE_TERMINATING event')
+    send_lifecycle_action(lifecycle_event, 'CONTINUE')
 
 
 def lambda_handler(event, context):
