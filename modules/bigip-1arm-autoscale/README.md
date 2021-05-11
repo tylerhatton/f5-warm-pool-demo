@@ -18,7 +18,7 @@ No requirements.
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | key\_pair | Name of key pair to SSH into the F5 BIG-IP. | `string` | `null` |
-| instance\_type | Size of F5 BIG-IP's EC2 instance. | `string` | `"t2.large"` |
+| instance\_type | Size of F5 BIG-IP's EC2 instance. | `string` | `"m5.xlarge"` |
 | admin\_username | Admin username for F5 management console and SSH server. | `string` | `"admin"` |
 | admin\_password | Admin password for F5 management console and SSH server. | `string` | `""` |
 | hostname | Hostname of F5 BIG-IP. | `string` | `"demo-f5.example.com"` |

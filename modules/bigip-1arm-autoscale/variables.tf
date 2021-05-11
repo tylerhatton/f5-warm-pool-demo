@@ -6,7 +6,7 @@ variable "key_pair" {
 
 variable "instance_type" {
   type        = string
-  default     = "t2.large"
+  default     = "m5.xlarge"
   description = "Size of F5 BIG-IP's EC2 instance."
 }
 

@@ -26,7 +26,7 @@ variable "default_tags" {
 
 variable "instance_type" {
   type        = string
-  default     = "t2.large"
+  default     = "t3.small"
   description = "Size of NGINX's EC2 instance."
 }
 

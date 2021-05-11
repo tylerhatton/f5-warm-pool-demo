@@ -2,6 +2,10 @@ locals {
   admin_password = var.admin_password != "" ? var.admin_password : random_password.admin_password.result
 }
 
+/*
+* BIG-IP Username and Password
+*/
+
 resource "random_password" "admin_password" {
   length  = 16
   special = false
@@ -29,6 +33,10 @@ resource "aws_secretsmanager_secret_version" "bigip_password" {
   secret_id     = aws_secretsmanager_secret.bigip_password.id
   secret_string = local.admin_password
 }
+
+/*
+* BIG-IP Launch Template and Autoscale group
+*/
 
 data "template_file" "user_data" {
   template = file("${path.module}/templates/user_data.tpl")
@@ -68,6 +76,13 @@ resource "aws_security_group" "bigip_1arm" {
   ingress {
     from_port   = 443
     to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -151,7 +166,14 @@ resource "aws_iam_role" "bigip_1arm_lt" {
           ]
         },
         {
-          Action   = ["ec2:DescribeInstances"]
+          Action = [
+            "ec2:DescribeInstances",
+            "ec2:DescribeInstanceStatus",
+            "ec2:DescribeAddresses",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DescribeNetworkInterfaceAttribute",
+            "ec2:DescribeRouteTables"
+          ]
           Effect   = "Allow"
           Resource = ["*"]
         }
@@ -163,7 +185,7 @@ resource "aws_iam_role" "bigip_1arm_lt" {
 resource "aws_autoscaling_group" "bigip_1arm" {
   name                      = "${var.name_prefix}-bigip-1arm-asg"
   vpc_zone_identifier       = [var.external_subnet_id]
-  desired_capacity          = 2
+  desired_capacity          = 3
   max_size                  = 5
   min_size                  = 1
   health_check_grace_period = 600
@@ -194,6 +216,10 @@ resource "aws_autoscaling_group" "bigip_1arm" {
     max_group_prepared_capacity = 3
   }
 }
+
+/*
+* Autoscale Lifecycle hook
+*/
 
 resource "aws_sns_topic" "bigip_1arm" {
   name = "${var.name_prefix}-bigip-1arm"
@@ -247,44 +273,6 @@ resource "aws_iam_role" "bigip_1arm_lh" {
       ]
     })
   }
-}
-
-module "nlb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 5.0"
-
-  name               = "${var.name_prefix}-external-nlb"
-  load_balancer_type = "network"
-  vpc_id             = var.vpc_id
-  subnets            = [var.external_subnet_id]
-
-  http_tcp_listeners = [
-    {
-      port               = 443
-      protocol           = "TCP"
-      target_group_index = 0
-    },
-    {
-      port               = 80
-      protocol           = "TCP"
-      target_group_index = 1
-    }
-  ]
-
-  target_groups = [
-    {
-      backend_protocol = "TCP"
-      backend_port     = 443
-      target_type      = "instance"
-    },
-    {
-      backend_protocol = "TCP"
-      backend_port     = 80
-      target_type      = "instance"
-    },
-  ]
-
-  lb_tags = var.default_tags
 }
 
 module "lifecycle_hook_lambda_function" {
@@ -372,6 +360,52 @@ resource "aws_iam_role" "bigip_1arm_lf" {
     })
   }
 }
+
+/*
+* NLB
+*/
+
+module "nlb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 5.0"
+
+  name               = "${var.name_prefix}-external-nlb"
+  load_balancer_type = "network"
+  vpc_id             = var.vpc_id
+  subnets            = [var.external_subnet_id]
+
+  http_tcp_listeners = [
+    {
+      port               = 443
+      protocol           = "TCP"
+      target_group_index = 0
+    },
+    {
+      port               = 80
+      protocol           = "TCP"
+      target_group_index = 1
+    }
+  ]
+
+  target_groups = [
+    {
+      backend_protocol = "TCP"
+      backend_port     = 443
+      target_type      = "instance"
+    },
+    {
+      backend_protocol = "TCP"
+      backend_port     = 80
+      target_type      = "instance"
+    },
+  ]
+
+  lb_tags = var.default_tags
+}
+
+/*
+* AS3 S3 Bucket
+*/
 
 resource "random_string" "bucket_prefix" {
   length  = 5
