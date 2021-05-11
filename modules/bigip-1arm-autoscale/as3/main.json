@@ -28,7 +28,17 @@
           "monitors": [
             "http"
           ],
-          "members": []
+          "members": [
+            {
+              "servicePort": 80,
+              "addressDiscovery": "aws",
+              "updateInterval": 10,
+              "tagKey": "Type",
+              "tagValue": "NGINX",
+              "addressRealm": "private",
+              "region": "us-west-1"
+            }
+          ]
         }
       }
     }

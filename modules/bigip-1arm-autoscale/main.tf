@@ -149,6 +149,11 @@ resource "aws_iam_role" "bigip_1arm_lt" {
           Resource = [
             aws_secretsmanager_secret.bigip_password.arn
           ]
+        },
+        {
+          Action   = ["ec2:DescribeInstances"]
+          Effect   = "Allow"
+          Resource = ["*"]
         }
       ]
     })

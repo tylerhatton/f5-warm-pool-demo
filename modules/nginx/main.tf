@@ -10,12 +10,16 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_autoscaling_group" "nginx" {
-  name                 = "${var.name_prefix}-nginx-asg"
-  launch_configuration = aws_launch_template.nginx.name
-  desired_capacity     = var.desired_capacity
-  min_size             = var.min_size
-  max_size             = var.max_size
-  vpc_zone_identifier  = [var.subnet_id]
+  name                = "${var.name_prefix}-nginx-asg"
+  desired_capacity    = var.desired_capacity
+  min_size            = var.min_size
+  max_size            = var.max_size
+  vpc_zone_identifier = [var.subnet_id]
+
+  launch_template {
+    id      = aws_launch_template.nginx.id
+    version = "$Latest"
+  }
 
   instance_refresh {
     strategy = "Rolling"
