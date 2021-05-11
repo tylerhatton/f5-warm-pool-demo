@@ -36,17 +36,17 @@ module "bigip_1arm_autoscale" {
   external_subnet_id = module.vpc.public_subnets[0]
   internal_subnet_id = module.vpc.private_subnets[0]
 
-  provisioned_modules = ["\"ltm\": \"nominal\""]
-
   default_tags = local.default_tags
 }
 
-module "jumpbox" {
-  source      = "git@github.com:tylerhatton/amazon-linux-jumpbox-tf-module.git"
-  name_prefix = "${local.name_prefix}-"
+module "nginx" {
+  source = "./modules/nginx"
 
-  key_pair   = var.key_pair
-  vpc_id     = module.vpc.vpc_id
-  subnet_id  = module.vpc.public_subnets[0]
-  private_ip = "10.128.10.100"
+  key_pair    = var.key_pair
+  name_prefix = local.name_prefix
+
+  vpc_id    = module.vpc.vpc_id
+  subnet_id = module.vpc.public_subnets[0]
+
+  default_tags = local.default_tags
 }

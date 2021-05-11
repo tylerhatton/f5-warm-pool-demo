@@ -35,7 +35,6 @@ data "template_file" "user_data" {
 
   vars = {
     admin_password_secret = aws_secretsmanager_secret.bigip_password.id
-    provisioned_modules   = join(",", var.provisioned_modules)
   }
 }
 

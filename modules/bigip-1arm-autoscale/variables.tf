@@ -45,12 +45,6 @@ variable "internal_subnet_id" {
   description = "ID of F5 BIG-IP's internal subnet."
 }
 
-variable "provisioned_modules" {
-  type        = list(string)
-  default     = ["\"ltm\": \"nominal\""]
-  description = "List of provisioned BIG-IP modules configured on the F5 BIG-IP."
-}
-
 variable "name_prefix" {
   type        = string
   default     = ""
