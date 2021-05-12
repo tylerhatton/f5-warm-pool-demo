@@ -55,3 +55,33 @@ variable "default_tags" {
   type    = map(any)
   default = {}
 }
+
+variable "desired_capacity" {
+  type        = number
+  default     = 2
+  description = "Desired number of BIG-IPs in autoscale group"
+}
+
+variable "max_size" {
+  type        = number
+  default     = 5
+  description = "Maximum number of BIG-IPs in autoscale group"
+}
+
+variable "min_size" {
+  type        = number
+  default     = 5
+  description = "Minimum number of BIG-IPs in autoscale group"
+}
+
+variable "warm_pool_min_size" {
+  type        = number
+  default     = 1
+  description = "Minimum number of BIG-IPs in the autoscale group's warm pool"
+}
+
+variable "warm_pool_max_prepared_capacity" {
+  type        = number
+  default     = 3
+  description = "Maximum number of BIG-IPs in the autoscale group's warm pool"
+}

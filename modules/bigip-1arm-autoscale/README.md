@@ -27,6 +27,11 @@ No requirements.
 | internal\_subnet\_id | ID of F5 BIG-IP's internal subnet. | `string` | n/a |
 | name\_prefix | Prefix applied to name of resources | `string` | `""` |
 | default\_tags | n/a | `map(any)` | `{}` |
+| desired\_capacity | Desired number of BIG-IPs in autoscale group | `number` | `2` |
+| max\_size | Maximum number of BIG-IPs in autoscale group | `number` | `5` |
+| min\_size | Minimum number of BIG-IPs in autoscale group | `number` | `5` |
+| warm\_pool\_min\_size | Minimum number of BIG-IPs in the autoscale group's warm pool | `number` | `1` |
+| warm\_pool\_max\_prepared\_capacity | Maximum number of BIG-IPs in the autoscale group's warm pool | `number` | `3` |
 
 ## Outputs
 
