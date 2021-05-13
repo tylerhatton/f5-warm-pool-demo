@@ -70,7 +70,7 @@ variable "max_size" {
 
 variable "min_size" {
   type        = number
-  default     = 5
+  default     = 1
   description = "Minimum number of BIG-IPs in autoscale group"
 }
 

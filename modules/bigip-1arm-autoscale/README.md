@@ -9,9 +9,9 @@ No requirements.
 
 | Name | Version |
 |------|---------|
-| random | n/a |
 | template | n/a |
 | aws | n/a |
+| random | n/a |
 
 ## Inputs
 
@@ -29,7 +29,7 @@ No requirements.
 | default\_tags | n/a | `map(any)` | `{}` |
 | desired\_capacity | Desired number of BIG-IPs in autoscale group | `number` | `2` |
 | max\_size | Maximum number of BIG-IPs in autoscale group | `number` | `5` |
-| min\_size | Minimum number of BIG-IPs in autoscale group | `number` | `5` |
+| min\_size | Minimum number of BIG-IPs in autoscale group | `number` | `1` |
 | warm\_pool\_min\_size | Minimum number of BIG-IPs in the autoscale group's warm pool | `number` | `1` |
 | warm\_pool\_max\_prepared\_capacity | Maximum number of BIG-IPs in the autoscale group's warm pool | `number` | `3` |
 
