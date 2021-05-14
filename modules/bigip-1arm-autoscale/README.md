@@ -9,9 +9,9 @@ No requirements.
 
 | Name | Version |
 |------|---------|
+| random | n/a |
 | template | n/a |
 | aws | n/a |
-| random | n/a |
 
 ## Inputs
 

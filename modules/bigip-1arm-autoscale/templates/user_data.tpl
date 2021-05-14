@@ -30,7 +30,7 @@ extension_packages:
       extensionUrl: https://github.com/F5Networks/f5-declarative-onboarding/releases/download/v1.19.0/f5-declarative-onboarding-1.19.0-2.noarch.rpm
     - extensionType: as3
       extensionVersion: 3.26.0
-      extensionUrl: https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.26.0/f5-appsvcs-3.26.0-5.noarch.rpm
+      extensionUrl: https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.26.1/f5-appsvcs-3.26.1-1.noarch.rpm
     - extensionType: ts
       extensionVersion: 1.18.0
       extensionUrl: https://github.com/F5Networks/f5-telemetry-streaming/releases/download/v1.18.0/f5-telemetry-1.18.0-2.noarch.rpm
@@ -63,6 +63,10 @@ extension_services:
             nameServers:
               - 10.0.0.2
               - 8.8.8.8
+          myProvisioning:
+            class: Provision
+            ltm: nominal
+            asm: nominal
           mySystem:
             autoPhonehome: true
             class: System
@@ -73,7 +77,7 @@ extension_services:
             password: '{{{ ADMIN_PASS }}}'
             shell: bash
 post_onboard_enabled:
-  - name: create_misc_routes
+  - name: save configs
     type: inline
     commands:
       - tmsh save sys config
