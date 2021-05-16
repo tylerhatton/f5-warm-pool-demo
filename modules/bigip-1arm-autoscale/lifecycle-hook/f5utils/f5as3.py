@@ -39,9 +39,7 @@ def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
         raise Exception(message)
 
 
-def is_as3_alive(f5_ip, username, password, max_retries, logger_name):
-    logger = logging.getLogger(logger_name)
-
+def is_as3_alive(f5_ip, username, password, max_retries):
     # Check if AS3 is responsive and available
     logger.info('Checking if AS3 is online...')
     retries = 0
