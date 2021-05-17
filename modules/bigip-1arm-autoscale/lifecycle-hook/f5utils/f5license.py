@@ -16,8 +16,7 @@ def revoke_bigip_license(bigiq_server, bigiq_username, bigiq_password, bigiq_lic
         instance_info = ec2.describe_instances(
             InstanceIds=[bigip_instance_id])
         bigip_private_ip = instance_info['Reservations'][0]['Instances'][0]['PrivateIpAddress']
-        bigip_public_ip = instance_info['Reservations'][0]['Instances'][0]['PublicIpAddress']
-        bigip_mac_address = instance_info['Reservations'][0]['Instances'][0] ['NetworkInterfaces'][0]['MacAddress']
+        bigip_mac_address = instance_info['Reservations'][0]['Instances'][0] ['NetworkInterfaces'][0]['MacAddress'].upper()
     except ClientError as e:
         message = 'Error completing lifecycle action: {}'.format(e)
         logger.error(message)
@@ -44,6 +43,7 @@ def revoke_bigip_license(bigiq_server, bigiq_username, bigiq_password, bigiq_lic
           timeout=20
       )
       response.raise_for_status()
+      logger.info(response.json())
     except requests.exceptions.HTTPError as e:
         message = 'Error licensing BIG-IP: {}'.format(e)
         logger.error(message)
