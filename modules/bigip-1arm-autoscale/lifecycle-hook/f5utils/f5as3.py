@@ -9,6 +9,7 @@ import time
 urllib3.disable_warnings()
 logger = logging.getLogger()
 
+
 def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
     s3 = boto3.resource('s3')
 
@@ -34,7 +35,7 @@ def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
                 message = 'Error executing AS3 declaration: {}'.format(e)
                 logger.error(message)
                 raise Exception(message)
-
+        logger.info('AS3 declarations successfully sent.')
     except ClientError as e:
         message = 'Error completing lifecycle action: {}'.format(e)
         logger.error(message)

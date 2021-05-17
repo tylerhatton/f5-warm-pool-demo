@@ -71,7 +71,7 @@ def instance_launching(lifecycle_event):
         if is_as3_alive(instance_public_ip, bigip_username, bigip_password, 60):
             logger.info('AS3 successfully requested.')
             # Sleeping for two minutes to wait for the license process to finish. DO is slooooooow.
-            if LICENSE_TYPE == 'BYOL':
+            if LICENSE_TYPE == 'BYOL' and lifecycle_event['Origin'] == 'AutoScalingGroup':
                 time.sleep(180)
             # Send AS3 declaration(s) to BIG-IP
             send_as3_declarations(instance_public_ip,
@@ -80,6 +80,7 @@ def instance_launching(lifecycle_event):
             send_lifecycle_action(lifecycle_event, 'CONTINUE')
         else:
             # AS3 is unreachable. Fail
+            send_lifecycle_action(lifecycle_event, 'ABANDON')
             message = 'AS3 appears to be unreachable...'
             logger.error(message)
             raise Exception(message)
