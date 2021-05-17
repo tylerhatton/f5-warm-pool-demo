@@ -24,6 +24,8 @@ A basic demonstration of using warm pool and lifecycle events to speed up the sc
 | name\_prefix | n/a | `string` | `"default"` |
 | owner | The name of the owner that will be tagged to the provisioned resources. | `string` | `null` |
 | key\_pair | Name of AWS key pair to be used to access EC2 instances. | `string` | `null` |
+| license\_type | Type of license used to license BIG-IP instances. BYOL or PAYG | `string` | `"PAYG"` |
+| bigiq\_server | Hostname or IP address of BIG-IQ server used to license BYOL BIG-IP instances. | `string` | `""` |
 
 ## Outputs
 

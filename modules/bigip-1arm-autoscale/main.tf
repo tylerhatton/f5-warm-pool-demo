@@ -1,5 +1,6 @@
 locals {
   admin_password = var.admin_password != "" ? var.admin_password : random_password.admin_password.result
+  ami_name       = var.license_type == "PAYG" ? "F5 BIGIP-15.1.2.1-0.0.10 PAYG-Best 1Gbps*" : "F5 BIGIP-15.1.2.1-0.0.10 BYOL-All Modules 2Boot*"
 }
 
 /*
@@ -42,7 +43,12 @@ data "template_file" "user_data" {
   template = file("${path.module}/templates/user_data.tpl")
 
   vars = {
-    admin_password_secret = aws_secretsmanager_secret.bigip_password.id
+    admin_password_secret          = aws_secretsmanager_secret.bigip_password.id
+    bigiq_username_secret_location = var.bigiq_username_secret_location
+    bigiq_password_secret_location = var.bigiq_password_secret_location
+    bigiq_server                   = var.bigiq_server
+    license_pool                   = var.bigiq_license_pool_name
+    license_type                   = var.license_type
   }
 }
 
@@ -52,7 +58,7 @@ data "aws_ami" "latest_f5_image" {
 
   filter {
     name   = "name"
-    values = ["F5 BIGIP-15.1.2.1-0.0.10 PAYG-Best 1Gbps*"]
+    values = [local.ami_name]
   }
 
   filter {
@@ -134,6 +140,14 @@ resource "aws_iam_instance_profile" "bigip_1arm" {
   role = aws_iam_role.bigip_1arm_lt.name
 }
 
+data "aws_secretsmanager_secret_version" "bigiq_username" {
+  secret_id = var.bigiq_username_secret_location
+}
+
+data "aws_secretsmanager_secret_version" "bigiq_password" {
+  secret_id = var.bigiq_password_secret_location
+}
+
 resource "aws_iam_role" "bigip_1arm_lt" {
   name        = "${var.name_prefix}-bigip-1arm-lt"
   description = "AWS role assigned to BIG-IP devices"
@@ -162,7 +176,9 @@ resource "aws_iam_role" "bigip_1arm_lt" {
           Action = ["secretsmanager:GetSecretValue"]
           Effect = "Allow"
           Resource = [
-            aws_secretsmanager_secret.bigip_password.arn
+            aws_secretsmanager_secret.bigip_password.arn,
+            data.aws_secretsmanager_secret_version.bigiq_username.arn,
+            data.aws_secretsmanager_secret_version.bigiq_password.arn
           ]
         },
         {
@@ -204,8 +220,17 @@ resource "aws_autoscaling_group" "bigip_1arm" {
   initial_lifecycle_hook {
     name                    = "${var.name_prefix}-bigip-1arm-launch"
     default_result          = "ABANDON"
-    heartbeat_timeout       = 600
+    heartbeat_timeout       = 840
     lifecycle_transition    = "autoscaling:EC2_INSTANCE_LAUNCHING"
+    notification_target_arn = aws_sns_topic.bigip_1arm.arn
+    role_arn                = aws_iam_role.bigip_1arm_lh.arn
+  }
+
+  initial_lifecycle_hook {
+    name                    = "${var.name_prefix}-bigip-1arm-terminate"
+    default_result          = "CONTINUE"
+    heartbeat_timeout       = 60
+    lifecycle_transition    = "autoscaling:EC2_INSTANCE_TERMINATING"
     notification_target_arn = aws_sns_topic.bigip_1arm.arn
     role_arn                = aws_iam_role.bigip_1arm_lh.arn
   }
@@ -289,9 +314,14 @@ module "lifecycle_hook_lambda_function" {
   tags          = var.default_tags
 
   environment_variables = {
-    USER_SECRET_LOCATION = aws_secretsmanager_secret.bigip_username.id
-    PASS_SECRET_LOCATION = aws_secretsmanager_secret.bigip_password.id
-    AS3_BUCKET_NAME      = aws_s3_bucket.bigip_1arm_as3.id
+    USER_SECRET_LOCATION       = aws_secretsmanager_secret.bigip_username.id
+    PASS_SECRET_LOCATION       = aws_secretsmanager_secret.bigip_password.id
+    AS3_BUCKET_NAME            = aws_s3_bucket.bigip_1arm_as3.id
+    LICENSE_TYPE               = var.license_type
+    BIGIQ_LICENSE_POOL_NAME    = var.bigiq_license_pool_name
+    BIGIQ_SERVER               = var.bigiq_server
+    BIGIQ_USER_SECRET_LOCATION = var.bigiq_username_secret_location
+    BIGIQ_PASS_SECRET_LOCATION = var.bigiq_password_secret_location
   }
 }
 
@@ -338,7 +368,9 @@ resource "aws_iam_role" "bigip_1arm_lf" {
           Effect = "Allow"
           Resource = [
             aws_secretsmanager_secret.bigip_username.arn,
-            aws_secretsmanager_secret.bigip_password.arn
+            aws_secretsmanager_secret.bigip_password.arn,
+            data.aws_secretsmanager_secret_version.bigiq_username.arn,
+            data.aws_secretsmanager_secret_version.bigiq_password.arn
           ]
         },
         {

@@ -9,9 +9,9 @@ No requirements.
 
 | Name | Version |
 |------|---------|
-| random | n/a |
 | template | n/a |
 | aws | n/a |
+| random | n/a |
 
 ## Inputs
 
@@ -32,6 +32,11 @@ No requirements.
 | min\_size | Minimum number of BIG-IPs in autoscale group | `number` | `1` |
 | warm\_pool\_min\_size | Minimum number of BIG-IPs in the autoscale group's warm pool | `number` | `1` |
 | warm\_pool\_max\_prepared\_capacity | Maximum number of BIG-IPs in the autoscale group's warm pool | `number` | `3` |
+| license\_type | Type of license used to license BIG-IP instances. BYOL or PAYG | `string` | `"PAYG"` |
+| bigiq\_server | Hostname or IP address of BIG-IQ server used to license BYOL BIG-IP instances. | `string` | `""` |
+| bigiq\_license\_pool\_name | Name of BIG-IQ license pool used to license BYOL instances. | `string` | `"default_pool"` |
+| bigiq\_username\_secret\_location | Name of AWS Secrets Manager secret that contains the username used to license BYOL instances. | `string` | `"bigiq_username"` |
+| bigiq\_password\_secret\_location | Name of AWS Secrets Manager secret that contains the password used to license BYOL instances. | `string` | `"bigiq_password"` |
 
 ## Outputs
 

@@ -1,5 +1,6 @@
 import requests
 import boto3
+from botocore.exceptions import ClientError
 import logging
 import urllib3
 import json
@@ -28,8 +29,9 @@ def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
                     verify=False,
                     timeout=5
                 )
+                response.raise_for_status()
             except requests.exceptions.HTTPError as e:
-                message = 'Error completing lifecycle action: {}'.format(e)
+                message = 'Error executing AS3 declaration: {}'.format(e)
                 logger.error(message)
                 raise Exception(message)
 

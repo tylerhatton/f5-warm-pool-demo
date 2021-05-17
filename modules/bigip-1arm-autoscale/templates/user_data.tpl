@@ -23,6 +23,22 @@ runtime_parameters:
       type: SecretsManager
       version: AWSCURRENT
       secretId: ${admin_password_secret}
+%{ if license_type == "BYOL" ~}
+  - name: BIGIQ_USER
+    type: secret
+    secretProvider:
+      environment: aws
+      type: SecretsManager
+      version: AWSCURRENT
+      secretId: ${bigiq_username_secret_location}
+  - name: BIGIQ_PASS
+    type: secret
+    secretProvider:
+      environment: aws
+      type: SecretsManager
+      version: AWSCURRENT
+      secretId: ${bigiq_password_secret_location}
+%{ endif ~}
 extension_packages: 
   install_operations:
     - extensionType: do
@@ -63,6 +79,20 @@ extension_services:
             nameServers:
               - 10.0.0.2
               - 8.8.8.8
+%{ if license_type == "BYOL" ~}
+          myLicense:
+            class: License
+            licenseType: licensePool
+            bigIqHost: ${bigiq_server}
+            bigIqUsername: '{{{ BIGIQ_USER }}}'
+            bigIqPassword: '{{{ BIGIQ_PASS }}}'
+            licensePool: ${license_pool}
+            skuKeyword1: BT
+            skuKeyword2: 10G
+            unitOfMeasure: yearly
+            reachable: false
+            hypervisor: aws
+%{ endif ~}
           myProvisioning:
             class: Provision
             ltm: nominal
