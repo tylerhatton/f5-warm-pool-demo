@@ -40,8 +40,6 @@ def send_lifecycle_action(lifecycle_event, result):
             LifecycleActionResult=result,
             InstanceId=lifecycle_event['EC2InstanceId']
         )
-
-        logger.info(response)
     except ClientError as e:
         message = 'Error completing lifecycle action: {}'.format(e)
         logger.error(message)
