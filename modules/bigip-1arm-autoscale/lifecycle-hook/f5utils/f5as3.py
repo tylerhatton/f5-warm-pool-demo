@@ -28,7 +28,7 @@ def send_as3_declarations(f5_ip, username, password, s3_declaration_location):
                     auth=(username, password),
                     json=as3_dec,
                     verify=False,
-                    timeout=5
+                    timeout=60
                 )
                 response.raise_for_status()
             except requests.exceptions.HTTPError as e:
