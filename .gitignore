@@ -33,6 +33,12 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Terraform Lock File - hiding for now.
+.terraform.lock.hcl
+
 # AWS SAM
 .aws-sam
 builds
+
+# System Files
+.vscode

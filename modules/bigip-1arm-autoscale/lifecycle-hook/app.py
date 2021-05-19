@@ -101,23 +101,20 @@ def instance_terminating(lifecycle_event):
             logger.info('EC2 Instance info: {}'.format(instance_info))
 
             # Grab BIG-IP and BIG-IQ username and password from secrets manager
-            bigip_username = sm.get_secret_value(
-                SecretId=BIGIP_USER_SECRET)['SecretString']
-            bigip_password = sm.get_secret_value(
-                SecretId=BIGIP_PASS_SECRET)['SecretString']
             bigiq_username = sm.get_secret_value(
                 SecretId=BIGIQ_USER_SECRET_LOCATION)['SecretString']
             bigiq_password = sm.get_secret_value(
                 SecretId=BIGIQ_PASS_SECRET_LOCATION)['SecretString']
 
             revoke_bigip_license(BIGIQ_SERVER, bigiq_username, bigiq_password,
-                                BIGIQ_LICENSE_POOL_NAME, bigip_username, bigip_password, ec2_instance_id)
+                                 BIGIQ_LICENSE_POOL_NAME, ec2_instance_id)
         except ClientError as e:
             message = 'Error completing lifecycle action: {}'.format(e)
             logger.error(message)
             raise Exception(message)
 
     send_lifecycle_action(lifecycle_event, 'CONTINUE')
+
 
 def lambda_handler(event, context):
     logger.info('Trigger Record: {}'.format(event['Records']))
