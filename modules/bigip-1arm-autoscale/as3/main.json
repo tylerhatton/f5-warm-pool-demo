@@ -21,7 +21,9 @@
             "use": "asm_policy"
           },
           "serverTLS": {"bigip":"/Common/clientssl"},
-          "persistenceMethods": [],
+          "persistenceMethods": [
+            "cookie"
+          ],
           "profileMultiplex": {
             "bigip": "/Common/oneconnect"
           }
