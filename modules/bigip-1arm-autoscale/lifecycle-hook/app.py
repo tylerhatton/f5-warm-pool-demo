@@ -8,8 +8,6 @@ import urllib3
 from f5utils.f5as3 import send_as3_declarations, is_as3_alive
 from f5utils.f5license import revoke_bigip_license
 
-from botocore.exceptions import ClientError
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 urllib3.disable_warnings()
@@ -33,7 +31,7 @@ BIGIQ_PASS_SECRET_LOCATION = os.environ['BIGIQ_PASS_SECRET_LOCATION']
 def send_lifecycle_action(lifecycle_event, result):
     # Update lifecycle event with continue or abort
     try:
-        response = autoscaling.complete_lifecycle_action(
+        autoscaling.complete_lifecycle_action(
             LifecycleHookName=lifecycle_event['LifecycleHookName'],
             AutoScalingGroupName=lifecycle_event['AutoScalingGroupName'],
             LifecycleActionToken=lifecycle_event['LifecycleActionToken'],

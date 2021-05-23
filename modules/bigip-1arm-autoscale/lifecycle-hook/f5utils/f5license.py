@@ -98,8 +98,7 @@ def license_bigip(bigiq_server, bigiq_username, bigiq_password, bigiq_license_po
             logger.info(
                 'Checking if BIG-IQ license has been created #: {}'.format(retries))
             license_file_response = requests.get(
-                'https://' + bigiq_server +
-                '/mgmt/cm/device/tasks/licensing/pool/member-management/' + license_id,
+                'https://' + bigiq_server + '/mgmt/cm/device/tasks/licensing/pool/member-management/' + license_id,
                 auth=(bigiq_username, bigiq_password),
                 verify=False,
                 timeout=20

@@ -8,25 +8,37 @@ on:
   pull_request:
 
 jobs:
+  flake8-lint:
+    name: "Python Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.9"
+      - name: flake8 Lint
+        uses: py-actions/flake8@v1
+        with:
+          ignore: "F501"
+          path: "modules/bigip-1arm-autoscale/lifecycle-hook"
   terraform:
+    name: "Terraform Tests"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: 0.15.1
-
       - name: Terraform fmt
         id: fmt
         run: terraform fmt -check
-
       - name: Terraform Init
         id: init
         run: terraform init
-
       - name: Terraform Validate
         id: validate
         run: terraform validate
