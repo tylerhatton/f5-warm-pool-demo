@@ -21,7 +21,7 @@ jobs:
       - name: flake8 Lint
         uses: py-actions/flake8@v1
         with:
-          ignore: "F501"
+          ignore: "E501"
           path: "modules/bigip-1arm-autoscale/lifecycle-hook"
   terraform:
     name: "Terraform Tests"
