@@ -29,10 +29,13 @@ module "vpc" {
 module "bigip_1arm_autoscale" {
   source = "./modules/bigip-1arm-autoscale"
 
-  key_pair     = var.key_pair
-  name_prefix  = local.name_prefix
-  bigiq_server = var.bigiq_server
-  license_type = var.license_type
+  key_pair                       = var.key_pair
+  name_prefix                    = local.name_prefix
+  bigiq_server                   = var.bigiq_server
+  bigiq_license_pool_name        = var.bigiq_license_pool_name
+  bigiq_username_secret_location = var.bigiq_username_secret_location
+  bigiq_password_secret_location = var.bigiq_password_secret_location
+  license_type                   = var.license_type
 
   vpc_id             = module.vpc.vpc_id
   external_subnet_id = module.vpc.public_subnets[0]

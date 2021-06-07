@@ -33,3 +33,21 @@ variable "bigiq_server" {
   default     = ""
   description = "Hostname or IP address of BIG-IQ server used to license BYOL BIG-IP instances."
 }
+
+variable "bigiq_license_pool_name" {
+  type        = string
+  default     = "default_pool"
+  description = "Name of BIG-IQ license pool used to license BYOL instances."
+}
+
+variable "bigiq_username_secret_location" {
+  type        = string
+  default     = "bigiq_username"
+  description = "Name of AWS Secrets Manager secret that contains the username used to license BYOL instances."
+}
+
+variable "bigiq_password_secret_location" {
+  type        = string
+  default     = "bigiq_password"
+  description = "Name of AWS Secrets Manager secret that contains the password used to license BYOL instances."
+}
