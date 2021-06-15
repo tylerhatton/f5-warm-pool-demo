@@ -51,3 +51,21 @@ variable "bigiq_password_secret_location" {
   default     = "bigiq_password"
   description = "Name of AWS Secrets Manager secret that contains the password used to license BYOL instances."
 }
+
+variable "desired_capacity" {
+  type        = number
+  default     = 2
+  description = "Desired number of BIG-IPs in autoscale group"
+}
+
+variable "max_size" {
+  type        = number
+  default     = 5
+  description = "Maximum number of BIG-IPs in autoscale group"
+}
+
+variable "min_size" {
+  type        = number
+  default     = 1
+  description = "Minimum number of BIG-IPs in autoscale group"
+}

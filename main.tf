@@ -41,6 +41,10 @@ module "bigip_1arm_autoscale" {
   external_subnet_id = module.vpc.public_subnets[0]
   internal_subnet_id = module.vpc.private_subnets[0]
 
+  desired_capacity = var.desired_capacity
+  max_size         = var.max_size
+  min_size         = var.min_size
+
   default_tags = local.default_tags
 }
 
