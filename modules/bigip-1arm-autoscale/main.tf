@@ -210,6 +210,9 @@ resource "aws_autoscaling_group" "bigip_1arm" {
 
   instance_refresh {
     strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
   }
 
   launch_template {
