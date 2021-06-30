@@ -1,6 +1,7 @@
 locals {
   admin_password = var.admin_password != "" ? var.admin_password : random_password.admin_password.result
   ami_name       = var.license_type == "PAYG" ? "F5 BIGIP-15.1.2.1-0.0.10 PAYG-Best 1Gbps*" : "F5 BIGIP-15.1.2.1-0.0.10 BYOL-All Modules 2Boot*"
+  ami_name_v16   = var.license_type == "PAYG" ? "F5 BIGIP-16.0.1.1-0.0.6 PAYG-Best 1Gbps*" : "F5 BIGIP-16.0.1.1-0.0.6 BYOL-All Modules 2Boot*"
 }
 
 /*
@@ -67,6 +68,21 @@ data "aws_ami" "latest_f5_image" {
   }
 }
 
+data "aws_ami" "latest_f5_v16_image" {
+  most_recent = true
+  owners      = ["679593333241"]
+
+  filter {
+    name   = "name"
+    values = [local.ami_name_v16]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_security_group" "bigip_1arm" {
   name        = "${var.name_prefix}-bigip-1arm-sg"
   description = "Allow inbound mgmt and https traffic"
@@ -111,6 +127,35 @@ resource "aws_security_group" "bigip_1arm" {
 resource "aws_launch_template" "bigip_1arm" {
   name          = "${var.name_prefix}-bigip-1arm-template"
   image_id      = data.aws_ami.latest_f5_image.id
+  key_name      = var.key_pair
+  instance_type = var.instance_type
+  user_data     = base64encode(data.template_file.user_data.rendered)
+  tags          = var.default_tags
+
+  network_interfaces {
+    subnet_id             = var.external_subnet_id
+    security_groups       = [aws_security_group.bigip_1arm.id]
+    delete_on_termination = true
+    description           = "external"
+    device_index          = 0
+  }
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.bigip_1arm.name
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(tomap({ "Name" = "F5_LTM" }), var.default_tags)
+  }
+}
+
+# Additional v16 launch template to demonstrate instance refresh
+
+resource "aws_launch_template" "bigip_1arm_v16" {
+  name          = "${var.name_prefix}-bigip-1arm-v16-template"
+  image_id      = data.aws_ami.latest_f5_v16_image.id
   key_name      = var.key_pair
   instance_type = var.instance_type
   user_data     = base64encode(data.template_file.user_data.rendered)
