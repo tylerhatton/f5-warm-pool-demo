@@ -1,5 +1,5 @@
 # F5 Warm Pool Demo
-A basic demonstration of using warm pool and lifecycle events to speed up and streamline the scaling of BIG-IP instances in AWS.
+A basic demonstration of using warm pool and lifecycle events to speed up and streamline the scaling of BIG-IP instances in AWS. The accompanying DevCentral article for this repository can be found [here](https://devcentral.f5.com/s/articles/Getting-the-Most-out-of-Amazon-EC2-Autoscale-Groups-with-F5-BIG-IP)
 ![Architecture diagram](images/2.png)
 
 
