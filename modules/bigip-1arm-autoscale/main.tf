@@ -186,10 +186,12 @@ resource "aws_iam_instance_profile" "bigip_1arm" {
 }
 
 data "aws_secretsmanager_secret_version" "bigiq_username" {
+  count     = var.license_type == "PAYG" ? 0 : 1
   secret_id = var.bigiq_username_secret_location
 }
 
 data "aws_secretsmanager_secret_version" "bigiq_password" {
+  count     = var.license_type == "PAYG" ? 0 : 1
   secret_id = var.bigiq_password_secret_location
 }
 
@@ -220,10 +222,12 @@ resource "aws_iam_role" "bigip_1arm_lt" {
         {
           Action = ["secretsmanager:GetSecretValue"]
           Effect = "Allow"
-          Resource = [
+          Resource = var.license_type == "PAYG" ? [
             aws_secretsmanager_secret.bigip_password.arn,
-            data.aws_secretsmanager_secret_version.bigiq_username.arn,
-            data.aws_secretsmanager_secret_version.bigiq_password.arn
+            ] : [
+            aws_secretsmanager_secret.bigip_password.arn,
+            data.aws_secretsmanager_secret_version.bigiq_username[0].arn,
+            data.aws_secretsmanager_secret_version.bigiq_password[0].arn
           ]
         },
         {
@@ -414,11 +418,14 @@ resource "aws_iam_role" "bigip_1arm_lf" {
         {
           Action = ["secretsmanager:GetSecretValue"]
           Effect = "Allow"
-          Resource = [
+          Resource = var.license_type == "PAYG" ? [
             aws_secretsmanager_secret.bigip_username.arn,
             aws_secretsmanager_secret.bigip_password.arn,
-            data.aws_secretsmanager_secret_version.bigiq_username.arn,
-            data.aws_secretsmanager_secret_version.bigiq_password.arn
+            ] : [
+            aws_secretsmanager_secret.bigip_username.arn,
+            aws_secretsmanager_secret.bigip_password.arn,
+            data.aws_secretsmanager_secret_version.bigiq_username[0].arn,
+            data.aws_secretsmanager_secret_version.bigiq_password[0].arn
           ]
         },
         {
