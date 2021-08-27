@@ -1,6 +1,6 @@
 locals {
   admin_password = var.admin_password != "" ? var.admin_password : random_password.admin_password.result
-  ami_name       = var.license_type == "PAYG" ? "F5 BIGIP-15.1.2.1-0.0.10 PAYG-Best 1Gbps*" : "F5 BIGIP-15.1.2.1-0.0.10 BYOL-All Modules 2Boot*"
+  ami_name       = var.license_type == "PAYG" ? "F5 BIGIP-16.1.0-0.0.19 PAYG-Best 1Gbps*" : "F5 BIGIP-16.1.0-0.0.19 BYOL-All Modules 2Boot*"
   ami_name_v16   = var.license_type == "PAYG" ? "F5 BIGIP-16.0.1.1-0.0.6 PAYG-Best 1Gbps*" : "F5 BIGIP-16.0.1.1-0.0.6 BYOL-All Modules 2Boot*"
 }
 
